@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   factoryName: HayFactory
   factoryIcon: {fileID: 21300000, guid: be5df5669c8834b66a502e016ef957ff, type: 3}
-  factoryPrefab: {fileID: 3573015413748600977, guid: 444fdb4fc89b9411aa4138a28e82b64d, type: 3}
+  factoryPrefab: {fileID: 4168756482833120834, guid: e1ba067d169470b4d975a4b20bfc8e84, type: 3}
   recipe:
     outputResourceName: Wheat
     outputAmount: 1

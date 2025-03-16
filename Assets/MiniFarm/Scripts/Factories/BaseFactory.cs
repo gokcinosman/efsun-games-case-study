@@ -10,12 +10,18 @@ public class BaseFactory : MonoBehaviour
     [SerializeField] protected Recipe recipe;
     protected bool isProducing = false;
     protected int currentStock = 0;
+    public FactoryConfig config;
     private IDisposable productionCoroutine; // UniRX timer
     public IObservable<int> OnStockChanged => stockSubject;
     private Subject<int> stockSubject = new Subject<int>();
     [Inject] protected ResourceManager resourceManager;
     protected virtual void Start()
     {
+        if (config != null)
+        {
+            capacity = config.capacity;
+            recipe = config.recipe;
+        }
         stockSubject.OnNext(currentStock);
     }
     public void AddProductionOrder()
@@ -74,5 +80,13 @@ public class BaseFactory : MonoBehaviour
     {
         isProducing = false;
         productionCoroutine?.Dispose(); // UniRx timer dispose
+    }
+    public void SetCapacity(int newCapacity)
+    {
+        capacity = newCapacity;
+    }
+    public void SetRecipe(Recipe newRecipe)
+    {
+        recipe = newRecipe;
     }
 }
