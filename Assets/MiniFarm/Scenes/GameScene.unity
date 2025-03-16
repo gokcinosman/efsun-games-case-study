@@ -280,8 +280,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   factoryStartPoint: {fileID: 1297158992}
   availableFactories:
-  - {fileID: 11400000, guid: e0394468cf44cd34b848664894aa362e, type: 2}
-  - {fileID: 11400000, guid: e0394468cf44cd34b848664894aa362e, type: 2}
+  - {fileID: 11400000, guid: 108fc2284f733a54780669ed4da485e1, type: 2}
+  - {fileID: 11400000, guid: e9d4f7d862afb524982429371b2d541c, type: 2}
+  - {fileID: 11400000, guid: 36e3b63f215910f4b857a31a45b5567a, type: 2}
   - {fileID: 11400000, guid: e0394468cf44cd34b848664894aa362e, type: 2}
   spacingX: 20
   spacingZ: 20

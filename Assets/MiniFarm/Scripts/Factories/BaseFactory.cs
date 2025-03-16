@@ -25,10 +25,13 @@ public class BaseFactory : MonoBehaviour
             recipe = config.recipe;
         }
         stockSubject.OnNext(currentStock);
-        // ResourceUI'ı başlat
         if (resourceUI != null)
         {
             resourceUI.Initialize(this);
+        }
+        if (recipe != null && !recipe.requiresInput && currentStock < capacity)
+        {
+            StartProduction();
         }
     }
     public void AddProductionOrder()
@@ -52,7 +55,11 @@ public class BaseFactory : MonoBehaviour
     }
     public void StartProduction()
     {
-        if (currentStock >= capacity) return;
+        if (currentStock >= capacity)
+        {
+            isProducing = false;
+            return;
+        }
         isProducing = true;
         productionCoroutine = Observable.Timer(TimeSpan.FromSeconds(recipe.productionTime)).Repeat().Subscribe(_ =>
         {
@@ -61,12 +68,15 @@ public class BaseFactory : MonoBehaviour
     }
     private void ProduceItem()
     {
-        if (currentStock < capacity)
+        if (currentStock >= capacity)
         {
-            currentStock += recipe.outputAmount;
-            stockSubject.OnNext(currentStock);
+            isProducing = false;
+            productionCoroutine?.Dispose();
+            return;
         }
-        else
+        currentStock += recipe.outputAmount;
+        stockSubject.OnNext(currentStock);
+        if (currentStock >= capacity)
         {
             isProducing = false;
             productionCoroutine?.Dispose();

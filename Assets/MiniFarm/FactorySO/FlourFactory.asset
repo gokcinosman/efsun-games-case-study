@@ -10,15 +10,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4b799bd276173f94cb17bb0770d8bcd8, type: 3}
-  m_Name: HayFactory
+  m_Name: FlourFactory
   m_EditorClassIdentifier: 
-  factoryName: HayFactory
-  factoryPrefab: {fileID: 4168756482833120834, guid: e1ba067d169470b4d975a4b20bfc8e84, type: 3}
+  factoryName: FlourFactory
+  factoryPrefab: {fileID: 4168756482833120834, guid: e10237a9d7ce20548ad59a37c9b02acb, type: 3}
   recipe:
-    outputResourceName: Wheat
-    outputResourceIcon: {fileID: 21300000, guid: be5df5669c8834b66a502e016ef957ff, type: 3}
+    outputResourceName: Flour
+    outputResourceIcon: {fileID: 21300000, guid: 4e5d546e8ce7e41029c6e5feb3608f9c, type: 3}
     outputAmount: 1
-    productionTime: 20
-    requiresInput: 0
-    requirements: []
-  capacity: 5
+    productionTime: 40
+    requiresInput: 1
+    requirements:
+    - resourceName: Wheat
+      amount: 1
+  capacity: 10
