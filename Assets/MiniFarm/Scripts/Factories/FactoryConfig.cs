@@ -4,7 +4,6 @@ using UnityEngine;
 public class FactoryConfig : ScriptableObject
 {
     public string factoryName;
-    public Sprite factoryIcon;
     public GameObject factoryPrefab;
     public Recipe recipe;
     public int capacity = 5;

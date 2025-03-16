@@ -21,18 +21,15 @@ public class FactoryManager : MonoBehaviour
             Debug.LogError("Fabrika başlangıç noktası ayarlanmamış!");
             return;
         }
-        // Tüm mevcut fabrikaların isimlerini alalım
         List<string> factoryNames = new List<string>();
         foreach (var factory in GetAvailableFactories())
         {
             factoryNames.Add(factory.factoryName);
         }
-        // Fabrikaları grid şeklinde oluşturalım
         List<BaseFactory> createdFactories = CreateFactoriesInGrid(
             factoryNames,
             factoryStartPoint.position
         );
-        Debug.Log($"{createdFactories.Count} adet fabrika başarıyla oluşturuldu.");
     }
     public BaseFactory CreateFactory(string factoryName, Vector3 position)
     {

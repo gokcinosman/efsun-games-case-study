@@ -10,11 +10,13 @@ public class BaseFactory : MonoBehaviour
     [SerializeField] protected Recipe recipe;
     protected bool isProducing = false;
     protected int currentStock = 0;
+    public int CurrentStock => currentStock;
     public FactoryConfig config;
     private IDisposable productionCoroutine; // UniRX timer
     public IObservable<int> OnStockChanged => stockSubject;
     private Subject<int> stockSubject = new Subject<int>();
     [Inject] protected ResourceManager resourceManager;
+    [SerializeField] private ResourceUI resourceUI;
     protected virtual void Start()
     {
         if (config != null)
@@ -23,6 +25,11 @@ public class BaseFactory : MonoBehaviour
             recipe = config.recipe;
         }
         stockSubject.OnNext(currentStock);
+        // ResourceUI'ı başlat
+        if (resourceUI != null)
+        {
+            resourceUI.Initialize(this);
+        }
     }
     public void AddProductionOrder()
     {
