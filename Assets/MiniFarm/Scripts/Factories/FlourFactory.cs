@@ -1,18 +1,18 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-
-public class FlourFactory : MonoBehaviour
+using Zenject;
+public class FlourFactory : BaseFactory
 {
-    // Start is called before the first frame update
-    void Start()
+    private ResourceManager resourceManager;
+    [Inject]
+    public void Construct(ResourceManager resourceManager)
     {
-        
+        this.resourceManager = resourceManager;
     }
-
-    // Update is called once per frame
-    void Update()
+    public void AddProductionOrder()
     {
-        
+        if (currentStock >= capacity) return;
+        if (!resourceManager.HasEnough("Wheat", 1)) return;
+        resourceManager.Consume("Wheat", 1);
+        StartProduction();
     }
 }
