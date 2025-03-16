@@ -10,4 +10,5 @@ public class ResourceUI : MonoBehaviour
     // süre sliderı
     // hammadde spriteı
     // ondalıklı bir üretim sırası göstergeci (hay factory dahil değil çünkü sınırsız üretim)
+    // eğer üretim varsa ui çalışsın. üretim yoksa fakat hammadde varsa hammadde miktarı gözüken bir ui olacak
 }

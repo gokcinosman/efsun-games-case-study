@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4b799bd276173f94cb17bb0770d8bcd8, type: 3}
+  m_Name: HayFactory
+  m_EditorClassIdentifier: 
+  factoryName: HayFactory
+  factoryIcon: {fileID: 21300000, guid: be5df5669c8834b66a502e016ef957ff, type: 3}
+  factoryPrefab: {fileID: 3573015413748600977, guid: 444fdb4fc89b9411aa4138a28e82b64d, type: 3}
+  recipe:
+    outputResourceName: Wheat
+    outputAmount: 1
+    productionTime: 20
+    requiresInput: 1
+    requirements: []
+  capacity: 5
