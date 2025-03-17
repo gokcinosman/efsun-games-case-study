@@ -13,27 +13,30 @@ public class ResourceUI : MonoBehaviour
     // hammadde spriteı
     // ondalıklı bir üretim sırası göstergeci (hay factory dahil değil çünkü sınırsız üretim)
     // eğer üretim varsa ui çalışsın. üretim yoksa fakat hammadde varsa hammadde miktarı gözüken bir ui olacak
-    [Header("UI Bileşenleri")]
     [SerializeField] private Image resourceIcon;
     [SerializeField] private TextMeshProUGUI resourceAmountText;
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private TextMeshProUGUI queueText;
     [SerializeField] private Slider productionProgressSlider;
     [SerializeField] private GameObject resourcePanel;
-    [Header("Ayarlar")]
     [SerializeField] private Vector3 offset = new Vector3(0, -2f, 0);
     private Transform targetTransform;
     private BaseFactory factory;
     private UIPositioner positioner;
     private float productionTimer = 0f;
-    private CompositeDisposable disposables = new CompositeDisposable();
+    private readonly CompositeDisposable disposables = new CompositeDisposable();
     private bool isInitialized = false;
     private void Awake()
+    {
+        InitializePositioner();
+    }
+    private void InitializePositioner()
     {
         positioner = GetComponent<UIPositioner>();
         if (positioner == null)
         {
             Debug.LogError("UIPositioner ekle.");
+            return;
         }
         positioner.SetOffset(offset);
     }
@@ -43,6 +46,19 @@ public class ResourceUI : MonoBehaviour
         targetTransform = factory.transform;
         positioner.SetTarget(targetTransform);
         disposables.Clear();
+        SubscribeToFactoryEvents();
+        SetupUIElements();
+        transform.localScale = -1 * transform.localScale;
+        TrackProductionProgressAsync().Forget();
+        if (factory.IsProducing)
+        {
+            UpdateProductionProgress(0f);
+        }
+        isInitialized = true;
+    }
+    private void SubscribeToFactoryEvents()
+    {
+        // Stok değişikliği
         factory.OnStockChanged
             .Subscribe(amount =>
             {
@@ -50,6 +66,7 @@ public class ResourceUI : MonoBehaviour
                 UpdateQueueText(factory.ProductionQueue);
             })
             .AddTo(disposables);
+        // Üretim durumu değişikliği
         factory.ObserveEveryValueChanged(f => f.IsProducing)
             .Subscribe(isProducing =>
             {
@@ -60,22 +77,19 @@ public class ResourceUI : MonoBehaviour
                 }
             })
             .AddTo(disposables);
+        // Üretim sırası değişikliği
         factory.ObserveEveryValueChanged(f => f.ProductionQueue)
             .Subscribe(queue => UpdateQueueText(queue))
             .AddTo(disposables);
+    }
+    private void SetupUIElements()
+    {
         UpdateUIState();
         UpdateQueueText(factory.ProductionQueue);
         if (factory.config != null && factory.config.recipe.outputResourceIcon != null)
         {
             resourceIcon.sprite = factory.config.recipe.outputResourceIcon;
         }
-        transform.localScale = -1 * transform.localScale;
-        TrackProductionProgressAsync().Forget();
-        if (factory.IsProducing)
-        {
-            UpdateProductionProgress(0f);
-        }
-        isInitialized = true;
     }
     private void UpdateResourceAmount(int amount)
     {
@@ -87,39 +101,49 @@ public class ResourceUI : MonoBehaviour
         productionProgressSlider.value = progress;
         if (timerText != null && factory != null && factory.config != null)
         {
-            float remainingTime = factory.config.recipe.productionTime * (1 - progress);
-            timerText.text = remainingTime.ToString("F0") + " sn";
-            timerText.color = Color.white;
+            UpdateTimerText(progress);
         }
         UpdateUIState();
     }
+    private void UpdateTimerText(float progress)
+    {
+        float remainingTime = factory.config.recipe.productionTime * (1 - progress);
+        timerText.text = remainingTime.ToString("F0") + " sn";
+        timerText.color = Color.white;
+    }
     private void UpdateQueueText(int queue)
     {
-        if (queueText != null && factory != null && factory.config != null)
+        if (queueText == null || factory == null || factory.config == null)
+            return;
+        int total = queue + factory.CurrentStock;
+        queueText.text = $"{total}/{factory.config.capacity}";
+        UpdateQueueTextColor(total, queue);
+    }
+    private void UpdateQueueTextColor(int total, int queue)
+    {
+        if (total >= factory.config.capacity)
         {
-            int total = queue + factory.CurrentStock;
-            queueText.text = $"{total}/{factory.config.capacity}";
-            if (total >= factory.config.capacity)
-            {
-                queueText.color = Color.red;
-            }
-            else if (queue > 0)
-            {
-                queueText.color = Color.yellow;
-            }
-            else
-            {
-                queueText.color = Color.white;
-            }
+            queueText.color = Color.red;
+        }
+        else if (queue > 0)
+        {
+            queueText.color = Color.yellow;
+        }
+        else
+        {
+            queueText.color = Color.white;
         }
     }
     private void UpdateUIState()
     {
-        if (factory == null || factory.config == null) return;
+        if (factory == null || factory.config == null)
+            return;
         bool hasProduction = factory.IsProducing;
         bool hasResources = factory.CurrentStock > 0;
         bool hasQueue = factory.ProductionQueue > 0;
+        // UI paneli üretim, kaynak veya sıra varsa göster
         resourcePanel.SetActive(hasProduction || hasResources || hasQueue);
+        // Kapasite doluysa FULL uyarısı göster
         bool isFull = factory.CurrentStock >= factory.config.capacity;
         if (isFull && timerText != null)
         {
@@ -132,14 +156,26 @@ public class ResourceUI : MonoBehaviour
         await UniTask.DelayFrame(0);
         while (this != null && isInitialized && gameObject.activeInHierarchy)
         {
-            if (factory != null && factory.IsProducing && factory.config != null && factory.config.recipe != null)
+            if (IsFactoryProducing())
             {
-                productionTimer += Time.deltaTime;
-                float progress = Mathf.Repeat(productionTimer, factory.config.recipe.productionTime) / factory.config.recipe.productionTime;
-                UpdateProductionProgress(progress);
+                UpdateProductionTimer();
             }
             await UniTask.Yield(PlayerLoopTiming.Update);
         }
+    }
+    private bool IsFactoryProducing()
+    {
+        return factory != null &&
+               factory.IsProducing &&
+               factory.config != null &&
+               factory.config.recipe != null;
+    }
+    private void UpdateProductionTimer()
+    {
+        productionTimer += Time.deltaTime;
+        float progress = Mathf.Repeat(productionTimer, factory.config.recipe.productionTime) /
+                         factory.config.recipe.productionTime;
+        UpdateProductionProgress(progress);
     }
     private void OnDestroy()
     {
