@@ -118,11 +118,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   resourceIcon: {fileID: 4010280329974620970}
   resourceAmountText: {fileID: 7890040233087258478}
-  timerText: {fileID: 0}
-  queueText: {fileID: 0}
+  timerText: {fileID: 7890040232185567043}
+  queueText: {fileID: 4411757628808207619}
   productionProgressSlider: {fileID: 7890040232342871911}
   resourcePanel: {fileID: 2068634533293433887}
-  offset: {x: 0, y: -2, z: 0}
+  offset: {x: -11, y: 8, z: 11}
 --- !u!114 &7997443901224493573
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -435,6 +435,17 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &7890040232185567043 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5982216325921618919, guid: b2a1327e235b145febb0422b58a917ff, type: 3}
+  m_PrefabInstance: {fileID: 4501936908408958116}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!224 &7890040232342871909 stripped

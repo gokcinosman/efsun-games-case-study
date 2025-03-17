@@ -50,7 +50,7 @@ public class ResourceUI : MonoBehaviour
                 UpdateQueueText(factory.ProductionQueue);
             })
             .AddTo(disposables);
-        factory.ObserveEveryValueChanged(f => f.IsProducing())
+        factory.ObserveEveryValueChanged(f => f.IsProducing)
             .Subscribe(isProducing =>
             {
                 UpdateUIState();
@@ -71,7 +71,7 @@ public class ResourceUI : MonoBehaviour
         }
         transform.localScale = -1 * transform.localScale;
         TrackProductionProgressAsync().Forget();
-        if (factory.IsProducing())
+        if (factory.IsProducing)
         {
             UpdateProductionProgress(0f);
         }
@@ -116,7 +116,7 @@ public class ResourceUI : MonoBehaviour
     private void UpdateUIState()
     {
         if (factory == null || factory.config == null) return;
-        bool hasProduction = factory.IsProducing();
+        bool hasProduction = factory.IsProducing;
         bool hasResources = factory.CurrentStock > 0;
         bool hasQueue = factory.ProductionQueue > 0;
         resourcePanel.SetActive(hasProduction || hasResources || hasQueue);
@@ -132,7 +132,7 @@ public class ResourceUI : MonoBehaviour
         await UniTask.DelayFrame(0);
         while (this != null && isInitialized && gameObject.activeInHierarchy)
         {
-            if (factory != null && factory.IsProducing() && factory.config != null && factory.config.recipe != null)
+            if (factory != null && factory.IsProducing && factory.config != null && factory.config.recipe != null)
             {
                 productionTimer += Time.deltaTime;
                 float progress = Mathf.Repeat(productionTimer, factory.config.recipe.productionTime) / factory.config.recipe.productionTime;

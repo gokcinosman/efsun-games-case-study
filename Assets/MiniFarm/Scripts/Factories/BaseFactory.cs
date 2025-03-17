@@ -21,6 +21,8 @@ public class BaseFactory : MonoBehaviour, IDisposable
     public IObservable<int> OnStockChanged => stockReactiveProperty;
     public IReadOnlyReactiveProperty<int> StockReactiveProperty => stockReactiveProperty;
     private readonly ReactiveProperty<int> stockReactiveProperty = new ReactiveProperty<int>(0);
+    private readonly ReactiveProperty<bool> isProducingReactiveProperty = new ReactiveProperty<bool>(false);
+    private readonly ReactiveProperty<int> productionQueueReactiveProperty = new ReactiveProperty<int>(0);
     private readonly CompositeDisposable _disposables = new CompositeDisposable();
     private bool isProducing;
     private int productionQueue;
@@ -71,7 +73,7 @@ public class BaseFactory : MonoBehaviour, IDisposable
         ConsumeRequiredResources();
         productionQueue += recipe.outputAmount;
         stockReactiveProperty.SetValueAndForceNotify(CurrentStock);
-        if (!isProducing)
+        if (!IsProducing)
         {
             StartProduction();
         }
@@ -100,7 +102,7 @@ public class BaseFactory : MonoBehaviour, IDisposable
             stockReactiveProperty.SetValueAndForceNotify(CurrentStock);
             if (productionQueue <= 0)
             {
-                isProducing = false;
+                IsProducing = false;
             }
         }
     }
@@ -109,14 +111,14 @@ public class BaseFactory : MonoBehaviour, IDisposable
         if (CurrentStock >= capacity ||
             (productionQueue <= 0 && (config == null || config.requiresInput)))
         {
-            isProducing = false;
+            IsProducing = false;
             return;
         }
-        isProducing = true;
+        IsProducing = true;
         try
         {
             var cancellationToken = this.GetCancellationTokenOnDestroy();
-            while (isProducing &&
+            while (IsProducing &&
                    CurrentStock < capacity &&
                    (productionQueue > 0 || (config != null && !config.requiresInput)))
             {
@@ -131,14 +133,14 @@ public class BaseFactory : MonoBehaviour, IDisposable
     }
     public void StartProduction()
     {
-        if (isProducing) return;
+        if (IsProducing) return;
         StartProductionAsync().Forget();
     }
     private void ProduceItem()
     {
         if (CurrentStock >= capacity)
         {
-            isProducing = false;
+            IsProducing = false;
             return;
         }
         if (productionQueue > 0)
@@ -152,15 +154,26 @@ public class BaseFactory : MonoBehaviour, IDisposable
         }
         else
         {
-            isProducing = false;
+            IsProducing = false;
             return;
         }
         if (CurrentStock >= capacity || (productionQueue <= 0 && (config == null || config.requiresInput)))
         {
-            isProducing = false;
+            IsProducing = false;
         }
     }
-    public bool IsProducing() => isProducing;
+    public bool IsProducing
+    {
+        get => isProducing;
+        private set
+        {
+            if (isProducing != value)
+            {
+                isProducing = value;
+                isProducingReactiveProperty.Value = value;
+            }
+        }
+    }
     public int CollectItems()
     {
         int collected = CurrentStock;
@@ -170,7 +183,7 @@ public class BaseFactory : MonoBehaviour, IDisposable
             string outputResourceName = recipe.outputResourceName;
             resourceManager.Add(outputResourceName, collected);
         }
-        if (config != null && !config.requiresInput && CurrentStock < capacity && !isProducing)
+        if (config != null && !config.requiresInput && CurrentStock < capacity && !IsProducing)
         {
             StartProduction();
         }
@@ -180,10 +193,14 @@ public class BaseFactory : MonoBehaviour, IDisposable
     {
         _disposables.Dispose();
         stockReactiveProperty.Dispose();
+        isProducingReactiveProperty.Dispose();
+        productionQueueReactiveProperty.Dispose();
     }
     protected virtual void OnDestroy()
     {
-        isProducing = false;
+        IsProducing = false;
         Dispose();
     }
+    public IReadOnlyReactiveProperty<bool> IsProducingReactiveProperty => isProducingReactiveProperty;
+    public IReadOnlyReactiveProperty<int> ProductionQueueReactiveProperty => productionQueueReactiveProperty;
 }

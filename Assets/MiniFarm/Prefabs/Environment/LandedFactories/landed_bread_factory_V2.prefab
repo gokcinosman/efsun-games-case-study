@@ -128,9 +128,9 @@ MonoBehaviour:
     outputAmount: 1
     productionTime: 5
     requirements: []
-  config: {fileID: 0}
   resourceUI: {fileID: 3673018571369950194}
   productionUI: {fileID: 6349587871296991764}
+  config: {fileID: 0}
 --- !u!1001 &1661667711731722718
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -173,7 +173,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2735447580131082796, guid: 7df3c2aff1b72e4439d2a5fc7ccca99a, type: 3}
       propertyPath: offset.y
-      value: 10
+      value: 8
       objectReference: {fileID: 0}
     - target: {fileID: 2735447580131082796, guid: 7df3c2aff1b72e4439d2a5fc7ccca99a, type: 3}
       propertyPath: offset.z
