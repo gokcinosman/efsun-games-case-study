@@ -26,4 +26,12 @@ public class ResourceManager : MonoBehaviour
         resources[resource] -= amount;
         resourceSubject.OnNext(new Dictionary<string, int>(resources));
     }
+    public int GetResourceAmount(string resource)
+    {
+        if (resources.ContainsKey(resource))
+        {
+            return resources[resource];
+        }
+        return 0;
+    }
 }
