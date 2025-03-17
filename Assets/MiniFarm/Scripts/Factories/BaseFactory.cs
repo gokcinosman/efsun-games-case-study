@@ -20,6 +20,8 @@ public class BaseFactory : MonoBehaviour
     [SerializeField] private ResourceUI resourceUI;
     [SerializeField] private ProductionUI productionUI;
     public ProductionUI ProductionUI => productionUI;
+    protected int productionQueue = 0;
+    public int ProductionQueue => productionQueue;
     protected virtual void Start()
     {
         if (config != null)
@@ -40,46 +42,64 @@ public class BaseFactory : MonoBehaviour
     }
     public void AddProductionOrder()
     {
-        if (currentStock >= capacity) return;
+        if (currentStock >= capacity)
+        {
+            return;
+        }
         if (!config.requiresInput)
         {
             StartProduction();
             return;
         }
+        int potentialProduction = productionQueue + currentStock + recipe.outputAmount;
+        if (potentialProduction > capacity)
+        {
+            return;
+        }
         foreach (var requirement in recipe.requirements)
         {
             bool hasEnough = resourceManager.HasEnough(requirement.resourceName, requirement.amount);
-            Debug.Log($"Gereksinim: {requirement.resourceName}, Miktar: {requirement.amount}, Yeterli mi: {hasEnough}");
             if (!hasEnough)
+            {
                 return;
+            }
         }
         foreach (var requirement in recipe.requirements)
         {
             resourceManager.Consume(requirement.resourceName, requirement.amount);
-            Debug.Log($"{requirement.amount} adet {requirement.resourceName} tüketildi");
         }
-        StartProduction();
+        productionQueue += recipe.outputAmount;
+        stockSubject.OnNext(currentStock);
+        if (!isProducing)
+        {
+            StartProduction();
+        }
     }
     public void RemoveProductionOrder()
     {
-        if (isProducing)
+        if (productionQueue >= recipe.outputAmount && config != null && recipe != null)
         {
-            isProducing = false;
-            productionCoroutine?.Dispose();
-            Debug.Log("Üretim durduruldu");
-        }
-        if (config != null && recipe != null)
-        {
+            productionQueue -= recipe.outputAmount;
             foreach (var requirement in recipe.requirements)
             {
                 resourceManager.Add(requirement.resourceName, requirement.amount);
-                Debug.Log($"{requirement.amount} adet {requirement.resourceName} geri verildi");
+            }
+            stockSubject.OnNext(currentStock);
+            if (productionQueue <= 0)
+            {
+                isProducing = false;
+                productionCoroutine?.Dispose();
             }
         }
     }
     public void StartProduction()
     {
         if (currentStock >= capacity)
+        {
+            isProducing = false;
+            return;
+        }
+        if (productionQueue <= 0 && (config == null || config.requiresInput))
         {
             isProducing = false;
             return;
@@ -98,9 +118,28 @@ public class BaseFactory : MonoBehaviour
             productionCoroutine?.Dispose();
             return;
         }
-        currentStock += recipe.outputAmount;
+        if (productionQueue > 0)
+        {
+            productionQueue -= recipe.outputAmount;
+            currentStock += recipe.outputAmount;
+        }
+        else if (config != null && !config.requiresInput)
+        {
+            currentStock += recipe.outputAmount;
+        }
+        else
+        {
+            isProducing = false;
+            productionCoroutine?.Dispose();
+            return;
+        }
         stockSubject.OnNext(currentStock);
         if (currentStock >= capacity)
+        {
+            isProducing = false;
+            productionCoroutine?.Dispose();
+        }
+        else if (productionQueue <= 0 && (config == null || config.requiresInput))
         {
             isProducing = false;
             productionCoroutine?.Dispose();
@@ -115,6 +154,15 @@ public class BaseFactory : MonoBehaviour
         int collected = currentStock;
         currentStock = 0;
         stockSubject.OnNext(currentStock);
+        if (collected > 0 && config != null && recipe != null)
+        {
+            string outputResourceName = recipe.outputResourceName;
+            resourceManager.Add(outputResourceName, collected);
+        }
+        if (config != null && !config.requiresInput && currentStock < capacity && !isProducing)
+        {
+            StartProduction();
+        }
         return collected;
     }
     protected virtual void OnDestroy()

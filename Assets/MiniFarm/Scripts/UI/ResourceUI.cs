@@ -17,6 +17,7 @@ public class ResourceUI : MonoBehaviour
     [SerializeField] private Image resourceIcon;
     [SerializeField] private TextMeshProUGUI resourceAmountText;
     [SerializeField] private TextMeshProUGUI timerText;
+    [SerializeField] private TextMeshProUGUI queueText;
     [SerializeField] private Slider productionProgressSlider;
     [SerializeField] private GameObject resourcePanel;
     [Header("Ayarlar")]
@@ -43,7 +44,11 @@ public class ResourceUI : MonoBehaviour
         positioner.SetTarget(targetTransform);
         disposables.Clear();
         factory.OnStockChanged
-            .Subscribe(amount => UpdateResourceAmount(amount))
+            .Subscribe(amount =>
+            {
+                UpdateResourceAmount(amount);
+                UpdateQueueText(factory.ProductionQueue);
+            })
             .AddTo(disposables);
         factory.ObserveEveryValueChanged(f => f.IsProducing())
             .Subscribe(isProducing =>
@@ -55,7 +60,11 @@ public class ResourceUI : MonoBehaviour
                 }
             })
             .AddTo(disposables);
+        factory.ObserveEveryValueChanged(f => f.ProductionQueue)
+            .Subscribe(queue => UpdateQueueText(queue))
+            .AddTo(disposables);
         UpdateUIState();
+        UpdateQueueText(factory.ProductionQueue);
         if (factory.config != null && factory.config.recipe.outputResourceIcon != null)
         {
             resourceIcon.sprite = factory.config.recipe.outputResourceIcon;
@@ -84,12 +93,33 @@ public class ResourceUI : MonoBehaviour
         }
         UpdateUIState();
     }
+    private void UpdateQueueText(int queue)
+    {
+        if (queueText != null && factory != null && factory.config != null)
+        {
+            int total = queue + factory.CurrentStock;
+            queueText.text = $"{total}/{factory.config.capacity}";
+            if (total >= factory.config.capacity)
+            {
+                queueText.color = Color.red;
+            }
+            else if (queue > 0)
+            {
+                queueText.color = Color.yellow;
+            }
+            else
+            {
+                queueText.color = Color.white;
+            }
+        }
+    }
     private void UpdateUIState()
     {
         if (factory == null || factory.config == null) return;
         bool hasProduction = factory.IsProducing();
         bool hasResources = factory.CurrentStock > 0;
-        resourcePanel.SetActive(hasProduction || hasResources);
+        bool hasQueue = factory.ProductionQueue > 0;
+        resourcePanel.SetActive(hasProduction || hasResources || hasQueue);
         bool isFull = factory.CurrentStock >= factory.config.capacity;
         if (isFull && timerText != null)
         {
