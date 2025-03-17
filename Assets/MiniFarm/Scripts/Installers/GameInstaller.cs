@@ -7,8 +7,12 @@ public class GameInstaller : MonoInstaller
     public override void InstallBindings()
     {
         Container.Bind<ResourceManager>()
-                 .FromComponentInHierarchy() // Sahnedeki instance'ı kullan
+                 .FromComponentInHierarchy()
                  .AsSingle()
                  .NonLazy();
+        Container.Bind<SaveManager>()
+       .FromComponentInHierarchy()
+       .AsSingle()
+       .NonLazy();
     }
 }

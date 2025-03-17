@@ -34,4 +34,13 @@ public class ResourceManager : MonoBehaviour
         }
         return 0;
     }
+    public Dictionary<string, int> GetAllResources()
+    {
+        return new Dictionary<string, int>(resources);
+    }
+    public void SetResource(string resource, int amount)
+    {
+        resources[resource] = amount;
+        resourceSubject.OnNext(new Dictionary<string, int>(resources));
+    }
 }

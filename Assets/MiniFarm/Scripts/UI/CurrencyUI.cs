@@ -27,6 +27,7 @@ public class CurrencyUI : MonoBehaviour
     private void Start()
     {
         InitializeResourceMapping();
+        UpdateResourceDisplay(resourceManager.GetAllResources());
         resourceManager.OnResourceChanged
             .Subscribe(UpdateResourceDisplay)
             .AddTo(this);
