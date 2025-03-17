@@ -8,12 +8,12 @@ public class Recipe
     public Sprite outputResourceIcon;
     public int outputAmount = 1;
     public float productionTime = 5f;
-    public bool requiresInput = true;
     public List<ResourceRequirement> requirements = new List<ResourceRequirement>();
 }
 [Serializable]
 public class ResourceRequirement
 {
     public string resourceName;
+    public Sprite resourceIcon;
     public int amount;
 }

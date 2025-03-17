@@ -10,9 +10,5 @@ public class GameInstaller : MonoInstaller
                  .FromComponentInHierarchy() // Sahnedeki instance'ı kullan
                  .AsSingle()
                  .NonLazy();
-        Container.Bind<FactoryUI>()
-           .FromComponentInHierarchy() // Sahnedeki instance'ı kullan
-           .AsSingle()
-           .NonLazy();
     }
 }

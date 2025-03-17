@@ -19,8 +19,11 @@ MonoBehaviour:
     outputResourceIcon: {fileID: 21300000, guid: 11d51e1b08e7d4a5d9e8935346113980, type: 3}
     outputAmount: 1
     productionTime: 90
-    requiresInput: 1
     requirements:
     - resourceName: Flour
+      resourceIcon: {fileID: 21300000, guid: 4e5d546e8ce7e41029c6e5feb3608f9c, type: 3}
       amount: 1
+  requiresInput: 1
   capacity: 10
+  removeAmount: 1
+  addAmount: 1

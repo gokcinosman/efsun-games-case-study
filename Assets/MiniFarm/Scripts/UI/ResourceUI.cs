@@ -18,19 +18,29 @@ public class ResourceUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI resourceAmountText;
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private Slider productionProgressSlider;
-    [SerializeField] private GameObject productionPanel;
     [SerializeField] private GameObject resourcePanel;
     [Header("Ayarlar")]
     [SerializeField] private Vector3 offset = new Vector3(0, -2f, 0);
     private Transform targetTransform;
     private BaseFactory factory;
+    private UIPositioner positioner;
     private float productionTimer = 0f;
     private CompositeDisposable disposables = new CompositeDisposable();
     private bool isInitialized = false;
+    private void Awake()
+    {
+        positioner = GetComponent<UIPositioner>();
+        if (positioner == null)
+        {
+            Debug.LogError("UIPositioner ekle.");
+        }
+        positioner.SetOffset(offset);
+    }
     public void Initialize(BaseFactory factory)
     {
         this.factory = factory;
         targetTransform = factory.transform;
+        positioner.SetTarget(targetTransform);
         disposables.Clear();
         factory.OnStockChanged
             .Subscribe(amount => UpdateResourceAmount(amount))
@@ -79,7 +89,6 @@ public class ResourceUI : MonoBehaviour
         if (factory == null || factory.config == null) return;
         bool hasProduction = factory.IsProducing();
         bool hasResources = factory.CurrentStock > 0;
-        //productionPanel.SetActive(hasProduction);
         resourcePanel.SetActive(hasProduction || hasResources);
         bool isFull = factory.CurrentStock >= factory.config.capacity;
         if (isFull && timerText != null)
@@ -112,14 +121,6 @@ public class ResourceUI : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             Time.timeScale = Time.timeScale * 10;
-        }
-    }
-    private void LateUpdate()
-    {
-        if (targetTransform != null)
-        {
-            transform.position = targetTransform.position + offset;
-            transform.rotation = Camera.main.transform.rotation;
         }
     }
 }

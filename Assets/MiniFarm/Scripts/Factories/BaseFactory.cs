@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UniRx;
+using Unity.VisualScripting;
 using UnityEngine;
 using Zenject;
 public class BaseFactory : MonoBehaviour
@@ -17,6 +18,8 @@ public class BaseFactory : MonoBehaviour
     private Subject<int> stockSubject = new Subject<int>();
     [Inject] protected ResourceManager resourceManager;
     [SerializeField] private ResourceUI resourceUI;
+    [SerializeField] private ProductionUI productionUI;
+    public ProductionUI ProductionUI => productionUI;
     protected virtual void Start()
     {
         if (config != null)
@@ -25,11 +28,12 @@ public class BaseFactory : MonoBehaviour
             recipe = config.recipe;
         }
         stockSubject.OnNext(currentStock);
-        if (resourceUI != null)
+        if (resourceUI != null && productionUI != null)
         {
             resourceUI.Initialize(this);
+            productionUI.Initialize(this);
         }
-        if (recipe != null && !recipe.requiresInput && currentStock < capacity)
+        if (recipe != null && config != null && !config.requiresInput && currentStock < capacity)
         {
             StartProduction();
         }
@@ -37,21 +41,41 @@ public class BaseFactory : MonoBehaviour
     public void AddProductionOrder()
     {
         if (currentStock >= capacity) return;
-        if (!recipe.requiresInput)
+        if (!config.requiresInput)
         {
             StartProduction();
             return;
         }
         foreach (var requirement in recipe.requirements)
         {
-            if (!resourceManager.HasEnough(requirement.resourceName, requirement.amount))
+            bool hasEnough = resourceManager.HasEnough(requirement.resourceName, requirement.amount);
+            Debug.Log($"Gereksinim: {requirement.resourceName}, Miktar: {requirement.amount}, Yeterli mi: {hasEnough}");
+            if (!hasEnough)
                 return;
         }
         foreach (var requirement in recipe.requirements)
         {
             resourceManager.Consume(requirement.resourceName, requirement.amount);
+            Debug.Log($"{requirement.amount} adet {requirement.resourceName} tüketildi");
         }
         StartProduction();
+    }
+    public void RemoveProductionOrder()
+    {
+        if (isProducing)
+        {
+            isProducing = false;
+            productionCoroutine?.Dispose();
+            Debug.Log("Üretim durduruldu");
+        }
+        if (config != null && recipe != null)
+        {
+            foreach (var requirement in recipe.requirements)
+            {
+                resourceManager.Add(requirement.resourceName, requirement.amount);
+                Debug.Log($"{requirement.amount} adet {requirement.resourceName} geri verildi");
+            }
+        }
     }
     public void StartProduction()
     {

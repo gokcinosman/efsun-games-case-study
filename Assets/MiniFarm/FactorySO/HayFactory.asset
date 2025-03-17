@@ -19,6 +19,8 @@ MonoBehaviour:
     outputResourceIcon: {fileID: 21300000, guid: be5df5669c8834b66a502e016ef957ff, type: 3}
     outputAmount: 1
     productionTime: 20
-    requiresInput: 0
     requirements: []
+  requiresInput: 0
   capacity: 5
+  removeAmount: 1
+  addAmount: 1
