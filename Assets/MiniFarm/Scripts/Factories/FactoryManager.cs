@@ -26,10 +26,10 @@ public class FactoryManager : MonoBehaviour
         {
             factoryNames.Add(factory.factoryName);
         }
-        List<BaseFactory> createdFactories = CreateFactoriesInGrid(
-            factoryNames,
-            factoryStartPoint.position
-        );
+        CreateFactoriesInGrid(
+           factoryNames,
+           factoryStartPoint.position
+       );
     }
     public BaseFactory CreateFactory(string factoryName, Vector3 position)
     {

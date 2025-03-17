@@ -5,74 +5,87 @@ using UniRx;
 using Unity.VisualScripting;
 using UnityEngine;
 using Zenject;
-public class BaseFactory : MonoBehaviour
+using Cysharp.Threading.Tasks;
+using UnityEngine.Experimental.Rendering;
+using System.Linq;
+public class BaseFactory : MonoBehaviour, IDisposable
 {
     [SerializeField] protected int capacity;
     [SerializeField] protected Recipe recipe;
-    protected bool isProducing = false;
-    protected int currentStock = 0;
-    public int CurrentStock => currentStock;
-    public FactoryConfig config;
-    private IDisposable productionCoroutine; // UniRX timer
-    public IObservable<int> OnStockChanged => stockSubject;
-    private Subject<int> stockSubject = new Subject<int>();
-    [Inject] protected ResourceManager resourceManager;
     [SerializeField] private ResourceUI resourceUI;
     [SerializeField] private ProductionUI productionUI;
+    public FactoryConfig config;
     public ProductionUI ProductionUI => productionUI;
-    protected int productionQueue = 0;
+    public int CurrentStock => stockReactiveProperty.Value;
     public int ProductionQueue => productionQueue;
+    public IObservable<int> OnStockChanged => stockReactiveProperty;
+    public IReadOnlyReactiveProperty<int> StockReactiveProperty => stockReactiveProperty;
+    private readonly ReactiveProperty<int> stockReactiveProperty = new ReactiveProperty<int>(0);
+    private readonly CompositeDisposable _disposables = new CompositeDisposable();
+    private bool isProducing;
+    private int productionQueue;
+    [Inject] protected ResourceManager resourceManager;
     protected virtual void Start()
+    {
+        InitializeFactory();
+        InitializeUI();
+        TryStartAutoProduction();
+    }
+    private void InitializeFactory()
     {
         if (config != null)
         {
             capacity = config.capacity;
             recipe = config.recipe;
         }
-        stockSubject.OnNext(currentStock);
+    }
+    private void InitializeUI()
+    {
         if (resourceUI != null && productionUI != null)
         {
             resourceUI.Initialize(this);
             productionUI.Initialize(this);
         }
-        if (recipe != null && config != null && !config.requiresInput && currentStock < capacity)
+    }
+    private void TryStartAutoProduction()
+    {
+        if (recipe != null && config != null && !config.requiresInput && CurrentStock < capacity)
         {
             StartProduction();
         }
     }
     public void AddProductionOrder()
     {
-        if (currentStock >= capacity)
-        {
+        if (CurrentStock >= capacity)
             return;
-        }
         if (!config.requiresInput)
         {
             StartProduction();
             return;
         }
-        int potentialProduction = productionQueue + currentStock + recipe.outputAmount;
+        int potentialProduction = productionQueue + CurrentStock + recipe.outputAmount;
         if (potentialProduction > capacity)
-        {
             return;
-        }
-        foreach (var requirement in recipe.requirements)
-        {
-            bool hasEnough = resourceManager.HasEnough(requirement.resourceName, requirement.amount);
-            if (!hasEnough)
-            {
-                return;
-            }
-        }
-        foreach (var requirement in recipe.requirements)
-        {
-            resourceManager.Consume(requirement.resourceName, requirement.amount);
-        }
+        if (!HasEnoughResources())
+            return;
+        ConsumeRequiredResources();
         productionQueue += recipe.outputAmount;
-        stockSubject.OnNext(currentStock);
+        stockReactiveProperty.SetValueAndForceNotify(CurrentStock);
         if (!isProducing)
         {
             StartProduction();
+        }
+    }
+    private bool HasEnoughResources()
+    {
+        return recipe.requirements.All(requirement =>
+            resourceManager.HasEnough(requirement.resourceName, requirement.amount));
+    }
+    private void ConsumeRequiredResources()
+    {
+        foreach (var requirement in recipe.requirements)
+        {
+            resourceManager.Consume(requirement.resourceName, requirement.amount);
         }
     }
     public void RemoveProductionOrder()
@@ -84,98 +97,93 @@ public class BaseFactory : MonoBehaviour
             {
                 resourceManager.Add(requirement.resourceName, requirement.amount);
             }
-            stockSubject.OnNext(currentStock);
+            stockReactiveProperty.SetValueAndForceNotify(CurrentStock);
             if (productionQueue <= 0)
             {
                 isProducing = false;
-                productionCoroutine?.Dispose();
             }
         }
     }
-    public void StartProduction()
+    public async UniTask StartProductionAsync()
     {
-        if (currentStock >= capacity)
-        {
-            isProducing = false;
-            return;
-        }
-        if (productionQueue <= 0 && (config == null || config.requiresInput))
+        if (CurrentStock >= capacity ||
+            (productionQueue <= 0 && (config == null || config.requiresInput)))
         {
             isProducing = false;
             return;
         }
         isProducing = true;
-        productionCoroutine = Observable.Timer(TimeSpan.FromSeconds(recipe.productionTime)).Repeat().Subscribe(_ =>
+        try
         {
-            ProduceItem();
-        });
+            var cancellationToken = this.GetCancellationTokenOnDestroy();
+            while (isProducing &&
+                   CurrentStock < capacity &&
+                   (productionQueue > 0 || (config != null && !config.requiresInput)))
+            {
+                await UniTask.Delay(TimeSpan.FromSeconds(recipe.productionTime), cancellationToken: cancellationToken);
+                ProduceItem();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // İşlem iptal edildiğinde yapılacak birşey yok
+        }
+    }
+    public void StartProduction()
+    {
+        if (isProducing) return;
+        StartProductionAsync().Forget();
     }
     private void ProduceItem()
     {
-        if (currentStock >= capacity)
+        if (CurrentStock >= capacity)
         {
             isProducing = false;
-            productionCoroutine?.Dispose();
             return;
         }
         if (productionQueue > 0)
         {
             productionQueue -= recipe.outputAmount;
-            currentStock += recipe.outputAmount;
+            stockReactiveProperty.Value += recipe.outputAmount;
         }
         else if (config != null && !config.requiresInput)
         {
-            currentStock += recipe.outputAmount;
+            stockReactiveProperty.Value += recipe.outputAmount;
         }
         else
         {
             isProducing = false;
-            productionCoroutine?.Dispose();
             return;
         }
-        stockSubject.OnNext(currentStock);
-        if (currentStock >= capacity)
+        if (CurrentStock >= capacity || (productionQueue <= 0 && (config == null || config.requiresInput)))
         {
             isProducing = false;
-            productionCoroutine?.Dispose();
-        }
-        else if (productionQueue <= 0 && (config == null || config.requiresInput))
-        {
-            isProducing = false;
-            productionCoroutine?.Dispose();
         }
     }
-    public bool IsProducing()
-    {
-        return isProducing;
-    }
+    public bool IsProducing() => isProducing;
     public int CollectItems()
     {
-        int collected = currentStock;
-        currentStock = 0;
-        stockSubject.OnNext(currentStock);
+        int collected = CurrentStock;
+        stockReactiveProperty.Value = 0;
         if (collected > 0 && config != null && recipe != null)
         {
             string outputResourceName = recipe.outputResourceName;
             resourceManager.Add(outputResourceName, collected);
         }
-        if (config != null && !config.requiresInput && currentStock < capacity && !isProducing)
+        if (config != null && !config.requiresInput && CurrentStock < capacity && !isProducing)
         {
             StartProduction();
         }
         return collected;
     }
+    public void Dispose()
+    {
+        _disposables.Dispose();
+        stockReactiveProperty.Dispose();
+    }
     protected virtual void OnDestroy()
     {
         isProducing = false;
-        productionCoroutine?.Dispose(); // UniRx timer dispose
-    }
-    public void SetCapacity(int newCapacity)
-    {
-        capacity = newCapacity;
-    }
-    public void SetRecipe(Recipe newRecipe)
-    {
-        recipe = newRecipe;
+        Dispose();
     }
 }
