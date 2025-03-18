@@ -14,5 +14,9 @@ public class GameInstaller : MonoInstaller
        .FromComponentInHierarchy()
        .AsSingle()
        .NonLazy();
+        Container.Bind<FactoryManager>()
+       .FromComponentInHierarchy()
+       .AsSingle()
+       .NonLazy();
     }
 }

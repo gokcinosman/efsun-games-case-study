@@ -141,9 +141,7 @@ public class ResourceUI : MonoBehaviour
         bool hasProduction = factory.IsProducing;
         bool hasResources = factory.CurrentStock > 0;
         bool hasQueue = factory.ProductionQueue > 0;
-        // UI paneli üretim, kaynak veya sıra varsa göster
         resourcePanel.SetActive(hasProduction || hasResources || hasQueue);
-        // Kapasite doluysa FULL uyarısı göster
         bool isFull = factory.CurrentStock >= factory.config.capacity;
         if (isFull && timerText != null)
         {
@@ -167,6 +165,7 @@ public class ResourceUI : MonoBehaviour
     {
         return factory != null &&
                factory.IsProducing &&
+               factory.CurrentStock < factory.config.capacity &&
                factory.config != null &&
                factory.config.recipe != null;
     }

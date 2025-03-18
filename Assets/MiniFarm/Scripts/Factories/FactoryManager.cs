@@ -1,18 +1,46 @@
 using System.Collections.Generic;
+using UniRx;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using Zenject;
 public class FactoryManager : MonoBehaviour
 {
+    [Inject] private DiContainer container;
+    [Inject] private SaveManager saveManager;
     [SerializeField] private Transform factoryStartPoint;
     [SerializeField] private List<FactoryConfig> availableFactories = new List<FactoryConfig>();
-    [Inject] private DiContainer container;
     [Header("Grid Layout Settings")]
     [SerializeField] private float spacingX = 2f;
     [SerializeField] private float spacingZ = 2f;
     [SerializeField] private int maxColumnsPerRow = 3;
+    public List<BaseFactory> activeFactories = new List<BaseFactory>();
+    // ReactiveProperty - fabrikaların güncel durumunu izlemek için
+    public ReactiveCollection<BaseFactory> FactoriesCollection { get; private set; } = new ReactiveCollection<BaseFactory>();
     private void Start()
     {
         InitializeFactories();
+        LoadFactoryStocksAsync().Forget();
+    }
+    private async UniTaskVoid LoadFactoryStocksAsync()
+    {
+        await UniTask.DelayFrame(1);
+        List<FactoryData> savedFactories = saveManager.GetSavedFactoryData();
+        if (savedFactories != null && savedFactories.Count > 0)
+        {
+            foreach (var savedFactory in savedFactories)
+            {
+                var factoryToUpdate = activeFactories.Find(f => f.config.factoryName == savedFactory.factoryName);
+                if (factoryToUpdate != null)
+                {
+                    Debug.Log($"Fabrika stokunu yüklüyorum: {factoryToUpdate.config.factoryName}, Stok: {savedFactory.currentStock}");
+                    SetFactoryStock(factoryToUpdate, savedFactory.currentStock);
+                }
+            }
+            foreach (var factory in activeFactories)
+            {
+                Debug.Log($"Fabrika son durumu: {factory.config.factoryName}, Stok: {factory.CurrentStock}");
+            }
+        }
     }
     private void InitializeFactories()
     {
@@ -22,14 +50,38 @@ public class FactoryManager : MonoBehaviour
             return;
         }
         List<string> factoryNames = new List<string>();
-        foreach (var factory in GetAvailableFactories())
+        List<FactoryData> savedFactories = saveManager.GetSavedFactoryData();
+        if (savedFactories != null && savedFactories.Count > 0)
         {
-            factoryNames.Add(factory.factoryName);
+            foreach (var factoryData in savedFactories)
+            {
+                factoryNames.Add(factoryData.factoryName);
+            }
         }
-        CreateFactoriesInGrid(
-           factoryNames,
-           factoryStartPoint.position
-       );
+        else
+        {
+            // Varsayılan fabrikaları kullan
+            foreach (var factory in GetAvailableFactories())
+            {
+                factoryNames.Add(factory.factoryName);
+            }
+        }
+        // Fabrikaları oluştur
+        activeFactories = CreateFactoriesInGrid(
+            factoryNames,
+            factoryStartPoint.position
+        );
+        // ReactiveCollection'a ekle
+        FactoriesCollection.Clear();
+        foreach (var factory in activeFactories)
+        {
+            FactoriesCollection.Add(factory);
+        }
+    }
+    private void SetFactoryStock(BaseFactory factory, int stockAmount)
+    {
+        Debug.Log($"Fabrika stoku ayarlanıyor: {factory.config.factoryName}, Stok: {stockAmount}");
+        factory.SetStockDirectly(stockAmount);
     }
     public BaseFactory CreateFactory(string factoryName, Vector3 position)
     {

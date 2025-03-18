@@ -27,11 +27,16 @@ public class BaseFactory : MonoBehaviour, IDisposable
     private bool isProducing;
     private int productionQueue;
     [Inject] protected ResourceManager resourceManager;
+    private bool stockInitialized = false;
     protected virtual void Start()
     {
         InitializeFactory();
         InitializeUI();
-        TryStartAutoProduction();
+        // Eğer stok değeri başka bir yerden zaten ayarlanmışsa, otomatik üretimi başlatma
+        if (!stockInitialized)
+        {
+            TryStartAutoProduction();
+        }
     }
     private void InitializeFactory()
     {
@@ -200,6 +205,15 @@ public class BaseFactory : MonoBehaviour, IDisposable
     {
         IsProducing = false;
         Dispose();
+    }
+    public void SetStockDirectly(int value)
+    {
+        if (value >= 0 && value <= capacity)
+        {
+            stockInitialized = true;
+            stockReactiveProperty.Value = value;
+            Debug.Log($"{gameObject.name} fabrikasının stok değeri {value} olarak ayarlandı");
+        }
     }
     public IReadOnlyReactiveProperty<bool> IsProducingReactiveProperty => isProducingReactiveProperty;
     public IReadOnlyReactiveProperty<int> ProductionQueueReactiveProperty => productionQueueReactiveProperty;
