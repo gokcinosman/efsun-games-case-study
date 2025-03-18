@@ -7,35 +7,47 @@ using TMPro;
 using Zenject;
 using System;
 using Cysharp.Threading.Tasks;
+/// <summary>
+/// Fabrika kaynaklarını ve üretim durumunu gösteren UI bileşeni
+/// </summary>
 public class ResourceUI : MonoBehaviour
-{   // anlık hammadde miktarı
-    // süre sliderı
-    // hammadde spriteı
-    // ondalıklı bir üretim sırası göstergeci (hay factory dahil değil çünkü sınırsız üretim)
-    // eğer üretim varsa ui çalışsın. üretim yoksa fakat hammadde varsa hammadde miktarı gözüken bir ui olacak
+{
+    #region Serialized Fields
+    [Header("UI Bileşenleri")]
     [SerializeField] private Image resourceIcon;
     [SerializeField] private TextMeshProUGUI resourceAmountText;
     [SerializeField] private TextMeshProUGUI timerText;
     [SerializeField] private TextMeshProUGUI queueText;
     [SerializeField] private Slider productionProgressSlider;
     [SerializeField] private GameObject resourcePanel;
+    [Header("Pozisyon Ayarları")]
     [SerializeField] private Vector3 offset = new Vector3(0, -2f, 0);
+    #endregion
+    #region Private Fields
     private Transform targetTransform;
     private BaseFactory factory;
     private UIPositioner positioner;
-    private float productionTimer = 0f;
     private readonly CompositeDisposable disposables = new CompositeDisposable();
     private bool isInitialized = false;
+    #endregion
+    #region Unity Lifecycle
     private void Awake()
     {
         InitializePositioner();
     }
+    private void OnDestroy()
+    {
+        disposables.Dispose();
+        isInitialized = false;
+    }
+    #endregion
+    #region Initialization
     private void InitializePositioner()
     {
         positioner = GetComponent<UIPositioner>();
         if (positioner == null)
         {
-            Debug.LogError("UIPositioner ekle.");
+            Debug.LogError("UIPositioner eksik!");
             return;
         }
         positioner.SetOffset(offset);
@@ -71,10 +83,6 @@ public class ResourceUI : MonoBehaviour
             .Subscribe(isProducing =>
             {
                 UpdateUIState();
-                if (isProducing)
-                {
-                    productionTimer = 0f;
-                }
             })
             .AddTo(disposables);
         // Üretim sırası değişikliği
@@ -91,6 +99,8 @@ public class ResourceUI : MonoBehaviour
             resourceIcon.sprite = factory.config.recipe.outputResourceIcon;
         }
     }
+    #endregion
+    #region UI Updates
     private void UpdateResourceAmount(int amount)
     {
         resourceAmountText.text = amount.ToString();
@@ -148,7 +158,6 @@ public class ResourceUI : MonoBehaviour
         bool isFull = factory.CurrentStock >= factory.config.capacity;
         if (isFull)
         {
-            // Stok dolu olduğunda slider'ı sıfırla
             productionProgressSlider.value = 1f;
             if (timerText != null)
             {
@@ -157,6 +166,8 @@ public class ResourceUI : MonoBehaviour
             }
         }
     }
+    #endregion
+    #region Production Tracking
     private async UniTaskVoid TrackProductionProgressAsync()
     {
         await UniTask.DelayFrame(0);
@@ -187,16 +198,5 @@ public class ResourceUI : MonoBehaviour
                factory.config != null &&
                factory.config.recipe != null;
     }
-    private void OnDestroy()
-    {
-        disposables.Dispose();
-        isInitialized = false;
-    }
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Time.timeScale = Time.timeScale * 10;
-        }
-    }
+    #endregion
 }

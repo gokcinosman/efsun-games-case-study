@@ -9,6 +9,7 @@ public class FactoryManager : MonoBehaviour
     [Inject] private DiContainer container;
     [Inject] private SaveManager saveManager;
     [SerializeField] private Transform factoryStartPoint;
+    [SerializeField] private Transform factoriesParent;
     [SerializeField] private List<FactoryConfig> availableFactories = new List<FactoryConfig>();
     [Header("Grid Layout Settings")]
     [SerializeField] private float spacingX = 2f;
@@ -67,15 +68,25 @@ public class FactoryManager : MonoBehaviour
     private async UniTaskVoid LoadFactoryDataAsync()
     {
         // Fabrikaların oluşturulmasına zaman tanımak için kısa bekleme
-        await UniTask.Delay(100);
+        await UniTask.Delay(10);
         List<FactoryData> savedFactories = saveManager.GetSavedFactoryData();
-        if (savedFactories == null || savedFactories.Count == 0)
+        if (savedFactories != null && savedFactories.Count > 0)
         {
-            return;
+            foreach (var savedFactory in savedFactories)
+            {
+                ApplySavedDataToFactory(savedFactory);
+            }
         }
-        foreach (var savedFactory in savedFactories)
+        else
         {
-            ApplySavedDataToFactory(savedFactory);
+            // Kayıt yoksa, gereksinim istemeyen fabrikaları otomatik başlat
+            foreach (var factory in activeFactories)
+            {
+                if (factory.config != null && !factory.config.requiresInput)
+                {
+                    factory.StartProduction();
+                }
+            }
         }
     }
     private void ApplySavedDataToFactory(FactoryData savedFactory)
@@ -125,7 +136,7 @@ public class FactoryManager : MonoBehaviour
             config.factoryPrefab,
             position,
             Quaternion.identity,
-            null
+            factoriesParent
         );
         BaseFactory factory = factoryObject.GetComponent<BaseFactory>();
         factory.config = config;

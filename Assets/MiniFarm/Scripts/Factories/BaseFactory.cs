@@ -50,7 +50,6 @@ public class BaseFactory : MonoBehaviour, IDisposable
     private int productionQueue;
     private float remainingProductionTime;
     private float currentProductionTime;
-    private bool stockInitialized = false;
     [Inject] protected ResourceManager resourceManager;
     #endregion
     #region Unity Yaşam Döngüsü
@@ -262,7 +261,6 @@ public class BaseFactory : MonoBehaviour, IDisposable
     {
         if (value >= 0 && value <= capacity)
         {
-            stockInitialized = true;
             stockReactiveProperty.Value = value;
         }
     }

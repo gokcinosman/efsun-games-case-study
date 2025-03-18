@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Zenject;
+/// <summary>
+/// Kaynak verilerini saklayan veri sınıfı
+/// </summary>
 [Serializable]
 public class ResourceData
 {
@@ -14,6 +17,9 @@ public class ResourceData
         amount = value;
     }
 }
+/// <summary>
+/// Fabrika durumunu saklayan veri sınıfı
+/// </summary>
 [Serializable]
 public class FactoryData
 {
@@ -51,22 +57,15 @@ public class FactoryData
         lastSaveTime = DateTime.Now;
     }
 }
+/// <summary>
+/// Oyun verilerinin tamamını saklayan ana veri sınıfı
+/// </summary>
 [Serializable]
 public class GameData
-{ // hammaddelerin miktarı lazım -bitti-
-    // hammaddelerin isimleri lazım -bitti-
-    //   --------factory data--------
-    // factory id lazım -bitti-
-    // stock lazım -bitti-
-    // production queue lazım -eklendi-
-    // isproducing değişkeni lazım -eklendi-
-    // production progressin son anı lazım -eklendi-
-    // buraya değil ama genel bir production progress hesaplaması lazım
-    // production progress hesaplaması için factorynin üretim süresi lazım
-    // remaning time gibi bir şey yani -eklendi-
+{
     public List<ResourceData> resources = new List<ResourceData>();
     public List<FactoryData> factories = new List<FactoryData>();
-    public long lastSaveTimeTicks;  // DateTime yerine long (ticks) kullanılacak, yoksa saat 00000 olarak kaydediliyor.
+    public long lastSaveTimeTicks;  // DateTime yerine long (ticks) kullanılıyor
     [NonSerialized]
     private DateTime _lastSaveTime;
     public DateTime lastSaveTime
@@ -86,12 +85,20 @@ public class GameData
         }
     }
 }
+/// <summary>
+/// Oyun verilerini kaydeden ve yükleyen sınıf
+/// </summary>
 public class SaveManager : MonoBehaviour
 {
+    #region Dependencies
     [Inject] private ResourceManager resourceManager;
     [Inject] private FactoryManager factoryManager;
+    #endregion
+    #region Properties
     private GameData gameData = new GameData();
     private string saveFilePath;
+    #endregion
+    #region Unity Lifecycle
     private void Awake()
     {
         saveFilePath = Application.persistentDataPath + "/save.json";
@@ -105,6 +112,61 @@ public class SaveManager : MonoBehaviour
             ProcessOfflineProduction();
         }
     }
+    private void OnApplicationQuit()
+    {
+        SaveGame();
+    }
+    #endregion
+    #region Save Operations
+    /// <summary>
+    /// Tüm oyun verilerini kaydeder
+    /// </summary>
+    public void SaveGame()
+    {
+        SaveResourceData();
+        SaveFactoryData();
+        gameData.lastSaveTime = DateTime.Now;
+        string json = JsonUtility.ToJson(gameData, true);
+        System.IO.File.WriteAllText(saveFilePath, json);
+        Debug.Log("Oyun kaydedildi: " + saveFilePath);
+    }
+    /// <summary>
+    /// Kaynak verilerini kaydeder
+    /// </summary>
+    public void SaveResourceData()
+    {
+        if (resourceManager == null) return;
+        gameData.resources.Clear();
+        Dictionary<string, int> resourceDict = resourceManager.GetAllResources();
+        foreach (var resource in resourceDict)
+        {
+            gameData.resources.Add(new ResourceData(resource.Key, resource.Value));
+        }
+    }
+    /// <summary>
+    /// Fabrika verilerini kaydeder
+    /// </summary>
+    public void SaveFactoryData()
+    {
+        if (factoryManager == null) return;
+        gameData.factories.Clear();
+        foreach (var factory in factoryManager.activeFactories)
+        {
+            float remainingTime = factory.IsProducing ? factory.GetRemainingProductionTime() : 0f;
+            gameData.factories.Add(new FactoryData(
+                factory.config.factoryName,
+                factory.CurrentStock,
+                factory.IsProducing,
+                factory.ProductionQueue,
+                remainingTime
+            ));
+        }
+    }
+    #endregion
+    #region Load Operations
+    /// <summary>
+    /// Oyun verilerini diskten yükler
+    /// </summary>
     private void LoadGameData()
     {
         if (System.IO.File.Exists(saveFilePath))
@@ -128,16 +190,31 @@ public class SaveManager : MonoBehaviour
             gameData.lastSaveTime = DateTime.Now;
         }
     }
+    /// <summary>
+    /// Kaynak verilerini ResourceManager'a uygular
+    /// </summary>
     private void ApplyResourceData()
     {
-        if (resourceManager != null)
+        if (resourceManager == null) return;
+        foreach (var resource in gameData.resources)
         {
-            foreach (var resource in gameData.resources)
-            {
-                resourceManager.SetResource(resource.resourceName, resource.amount);
-            }
+            resourceManager.SetResource(resource.resourceName, resource.amount);
         }
     }
+    /// <summary>
+    /// Tüm oyun verilerini yükler ve uygular
+    /// </summary>
+    public void LoadGame()
+    {
+        LoadGameData();
+        ApplyResourceData();
+        ProcessOfflineProduction();
+    }
+    #endregion
+    #region Offline Production
+    /// <summary>
+    /// Oyun kapalıyken gerçekleşen üretimi hesaplar
+    /// </summary>
     private void ProcessOfflineProduction()
     {
         if (gameData.lastSaveTime == default(DateTime))
@@ -159,6 +236,9 @@ public class SaveManager : MonoBehaviour
         }
         gameData.lastSaveTime = now;
     }
+    /// <summary>
+    /// Belirli bir fabrikanın çevrimdışı üretimini günceller
+    /// </summary>
     private void UpdateFactoryOfflineProduction(FactoryData factoryData, float offlineSeconds)
     {
         BaseFactory factory = factoryManager.GetFactoryByName(factoryData.factoryName);
@@ -198,6 +278,9 @@ public class SaveManager : MonoBehaviour
         // Fabrika nesnesini güncelleme
         UpdateFactoryObject(factory, factoryData);
     }
+    /// <summary>
+    /// Çevrimdışı sürede üretilecek ürün sayısını hesaplar
+    /// </summary>
     private int CalculateOfflineProduction(float elapsedTime, float remainingTime,
                                           float productionTime, out float newRemainingTime)
     {
@@ -231,6 +314,9 @@ public class SaveManager : MonoBehaviour
         }
         return producedItems;
     }
+    /// <summary>
+    /// Fabrika nesnesini verilerle günceller
+    /// </summary>
     private void UpdateFactoryObject(BaseFactory factory, FactoryData factoryData)
     {
         factory.SetStockDirectly(factoryData.currentStock);
@@ -245,53 +331,14 @@ public class SaveManager : MonoBehaviour
             factory.SetRemainingProductionTime(0);
         }
     }
-    public void SaveGame()
-    {
-        SaveResourceData();
-        SaveFactoryData();
-        gameData.lastSaveTime = DateTime.Now;
-        string json = JsonUtility.ToJson(gameData, true);
-        System.IO.File.WriteAllText(saveFilePath, json);
-        Debug.Log("Oyun kaydedildi: " + saveFilePath);
-    }
-    public void SaveResourceData()
-    {
-        if (resourceManager == null) return;
-        gameData.resources.Clear();
-        Dictionary<string, int> resourceDict = resourceManager.GetAllResources();
-        foreach (var resource in resourceDict)
-        {
-            gameData.resources.Add(new ResourceData(resource.Key, resource.Value));
-        }
-    }
-    public void SaveFactoryData()
-    {
-        if (factoryManager == null) return;
-        gameData.factories.Clear();
-        foreach (var factory in factoryManager.activeFactories)
-        {
-            float remainingTime = factory.IsProducing ? factory.GetRemainingProductionTime() : 0f;
-            gameData.factories.Add(new FactoryData(
-                factory.config.factoryName,
-                factory.CurrentStock,
-                factory.IsProducing,
-                factory.ProductionQueue,
-                remainingTime
-            ));
-        }
-    }
-    public void LoadGame()
-    {
-        LoadGameData();
-        ApplyResourceData();
-        ProcessOfflineProduction();
-    }
+    #endregion
+    #region Public Helpers
+    /// <summary>
+    /// Kaydedilmiş fabrika verilerini döndürür
+    /// </summary>
     public List<FactoryData> GetSavedFactoryData()
     {
         return gameData.factories;
     }
-    private void OnApplicationQuit()
-    {
-        SaveGame();
-    }
+    #endregion
 }
