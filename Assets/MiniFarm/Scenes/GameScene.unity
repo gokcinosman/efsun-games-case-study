@@ -166,6 +166,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 95252e89a63437546bdcf93192588213, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  animationSpeed: 0.02
+  incrementStep: 1
 --- !u!1 &138127638
 GameObject:
   m_ObjectHideFlags: 0
@@ -339,6 +341,7 @@ Transform:
   - {fileID: 33436904}
   - {fileID: 1309412381}
   - {fileID: 298738067}
+  - {fileID: 1481168337}
   m_Father: {fileID: 1764273787}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &298738066
@@ -387,10 +390,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   resourceCollectAnimPrefab: {fileID: 3284052633652976700, guid: d366437a8bc02b546b720729a5191ae5, type: 3}
   worldCanvas: {fileID: 138127641}
-  initialMoveDistance: 100
-  initialMoveDuration: 1
-  targetMoveDuration: 0.8
+  animationDuration: 1
   fadeOutDuration: 0.7
+  curveHeight: 50
 --- !u!1 &346624022
 GameObject:
   m_ObjectHideFlags: 0
@@ -535,7 +537,6 @@ GameObject:
   m_Component:
   - component: {fileID: 370732264}
   - component: {fileID: 370732265}
-  - component: {fileID: 370732266}
   m_Layer: 5
   m_Name: Currencies
   m_TagString: Untagged
@@ -591,28 +592,6 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
---- !u!114 &370732266
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 370732263}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 443971c54a72e5a4f85283647b1469f6, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  resourceMappings:
-  - resourceKey: Bread
-    textComponent: {fileID: 8091629248506108546}
-    targetTransform: {fileID: 581178057587901596}
-  - resourceKey: Wheat
-    textComponent: {fileID: 1786309242}
-    targetTransform: {fileID: 1310445126}
-  - resourceKey: Flour
-    textComponent: {fileID: 1829464343}
-    targetTransform: {fileID: 481762829}
 --- !u!1 &393476922
 GameObject:
   m_ObjectHideFlags: 0
@@ -1460,6 +1439,60 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1428355283}
   m_CullTransparentMesh: 1
+--- !u!1 &1481168336
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1481168337}
+  - component: {fileID: 1481168338}
+  m_Layer: 0
+  m_Name: CurrencyUI
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1481168337
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1481168336}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 293677926}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1481168338
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1481168336}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 443971c54a72e5a4f85283647b1469f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  resourceMappings:
+  - resourceKey: Bread
+    textComponent: {fileID: 8091629248506108546}
+    targetTransform: {fileID: 581178057587901596}
+  - resourceKey: Wheat
+    textComponent: {fileID: 1786309242}
+    targetTransform: {fileID: 1310445126}
+  - resourceKey: Flour
+    textComponent: {fileID: 1829464343}
+    targetTransform: {fileID: 481762829}
 --- !u!1 &1552769853
 GameObject:
   m_ObjectHideFlags: 0
