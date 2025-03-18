@@ -5,6 +5,7 @@ using UnityEngine;
 using Zenject;
 public class FactoryManager : MonoBehaviour
 {
+    #region Bağımlılıklar ve Serileştirilen Değişkenler
     [Inject] private DiContainer container;
     [Inject] private SaveManager saveManager;
     [SerializeField] private Transform factoryStartPoint;
@@ -13,35 +14,19 @@ public class FactoryManager : MonoBehaviour
     [SerializeField] private float spacingX = 2f;
     [SerializeField] private float spacingZ = 2f;
     [SerializeField] private int maxColumnsPerRow = 3;
+    #endregion
+    #region Genel Özellikler
     public List<BaseFactory> activeFactories = new List<BaseFactory>();
-    // ReactiveProperty - fabrikaların güncel durumunu izlemek için
     public ReactiveCollection<BaseFactory> FactoriesCollection { get; private set; } = new ReactiveCollection<BaseFactory>();
+    #endregion
+    #region Unity Yaşam Döngüsü
     private void Start()
     {
         InitializeFactories();
-        LoadFactoryStocksAsync().Forget();
+        LoadFactoryDataAsync().Forget();
     }
-    private async UniTaskVoid LoadFactoryStocksAsync()
-    {
-        await UniTask.DelayFrame(1);
-        List<FactoryData> savedFactories = saveManager.GetSavedFactoryData();
-        if (savedFactories != null && savedFactories.Count > 0)
-        {
-            foreach (var savedFactory in savedFactories)
-            {
-                var factoryToUpdate = activeFactories.Find(f => f.config.factoryName == savedFactory.factoryName);
-                if (factoryToUpdate != null)
-                {
-                    Debug.Log($"Fabrika stokunu yüklüyorum: {factoryToUpdate.config.factoryName}, Stok: {savedFactory.currentStock}");
-                    SetFactoryStock(factoryToUpdate, savedFactory.currentStock);
-                }
-            }
-            foreach (var factory in activeFactories)
-            {
-                Debug.Log($"Fabrika son durumu: {factory.config.factoryName}, Stok: {factory.CurrentStock}");
-            }
-        }
-    }
+    #endregion
+    #region Fabrika Başlatma ve Yükleme
     private void InitializeFactories()
     {
         if (factoryStartPoint == null)
@@ -49,6 +34,17 @@ public class FactoryManager : MonoBehaviour
             Debug.LogError("Fabrika başlangıç noktası ayarlanmamış!");
             return;
         }
+        List<string> factoryNames = GetInitialFactoryNames();
+        activeFactories = CreateFactoriesInGrid(factoryNames, factoryStartPoint.position);
+        // ReactiveCollection'a fabrikaları ekle
+        FactoriesCollection.Clear();
+        foreach (var factory in activeFactories)
+        {
+            FactoriesCollection.Add(factory);
+        }
+    }
+    private List<string> GetInitialFactoryNames()
+    {
         List<string> factoryNames = new List<string>();
         List<FactoryData> savedFactories = saveManager.GetSavedFactoryData();
         if (savedFactories != null && savedFactories.Count > 0)
@@ -66,32 +62,41 @@ public class FactoryManager : MonoBehaviour
                 factoryNames.Add(factory.factoryName);
             }
         }
-        // Fabrikaları oluştur
-        activeFactories = CreateFactoriesInGrid(
-            factoryNames,
-            factoryStartPoint.position
-        );
-        // ReactiveCollection'a ekle
-        FactoriesCollection.Clear();
-        foreach (var factory in activeFactories)
+        return factoryNames;
+    }
+    private async UniTaskVoid LoadFactoryDataAsync()
+    {
+        // Fabrikaların oluşturulmasına zaman tanımak için kısa bekleme
+        await UniTask.Delay(100);
+        List<FactoryData> savedFactories = saveManager.GetSavedFactoryData();
+        if (savedFactories == null || savedFactories.Count == 0)
         {
-            FactoriesCollection.Add(factory);
+            return;
+        }
+        foreach (var savedFactory in savedFactories)
+        {
+            ApplySavedDataToFactory(savedFactory);
         }
     }
-    private void SetFactoryStock(BaseFactory factory, int stockAmount)
+    private void ApplySavedDataToFactory(FactoryData savedFactory)
     {
-        Debug.Log($"Fabrika stoku ayarlanıyor: {factory.config.factoryName}, Stok: {stockAmount}");
-        factory.SetStockDirectly(stockAmount);
+        BaseFactory factoryToUpdate = GetFactoryByName(savedFactory.factoryName);
+        if (factoryToUpdate == null)
+        {
+            return;
+        }
+        // Fabrika verilerini güncelle
+        factoryToUpdate.SetStockDirectly(savedFactory.currentStock);
+        factoryToUpdate.SetProductionQueue(savedFactory.productionQueue);
+        if (savedFactory.isProducing && savedFactory.currentStock < factoryToUpdate.config.capacity)
+        {
+            // Üretim devam ediyor ise kalan süreyi ayarla ve başlat
+            factoryToUpdate.SetRemainingProductionTime(savedFactory.remainingProductionTime);
+            factoryToUpdate.StartProduction();
+        }
     }
-    public BaseFactory CreateFactory(string factoryName, Vector3 position)
-    {
-        FactoryConfig config = availableFactories.Find(f => f.factoryName == factoryName);
-        if (config == null) return null;
-        GameObject factoryObject = container.InstantiatePrefab(config.factoryPrefab, position, Quaternion.identity, null);
-        BaseFactory factory = factoryObject.GetComponent<BaseFactory>();
-        factory.config = config;
-        return factory;
-    }
+    #endregion
+    #region Fabrika Oluşturma
     public List<BaseFactory> CreateFactoriesInGrid(List<string> factoryNames, Vector3 startPosition)
     {
         List<BaseFactory> createdFactories = new List<BaseFactory>();
@@ -112,8 +117,29 @@ public class FactoryManager : MonoBehaviour
         }
         return createdFactories;
     }
+    public BaseFactory CreateFactory(string factoryName, Vector3 position)
+    {
+        FactoryConfig config = availableFactories.Find(f => f.factoryName == factoryName);
+        if (config == null) return null;
+        GameObject factoryObject = container.InstantiatePrefab(
+            config.factoryPrefab,
+            position,
+            Quaternion.identity,
+            null
+        );
+        BaseFactory factory = factoryObject.GetComponent<BaseFactory>();
+        factory.config = config;
+        return factory;
+    }
+    #endregion
+    #region Yardımcı Metodlar
+    public BaseFactory GetFactoryByName(string factoryName)
+    {
+        return activeFactories.Find(f => f.config.factoryName == factoryName);
+    }
     public List<FactoryConfig> GetAvailableFactories()
     {
         return availableFactories;
     }
+    #endregion
 }

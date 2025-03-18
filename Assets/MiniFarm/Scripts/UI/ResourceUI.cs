@@ -107,9 +107,12 @@ public class ResourceUI : MonoBehaviour
     }
     private void UpdateTimerText(float progress)
     {
-        float remainingTime = factory.config.recipe.productionTime * (1 - progress);
-        timerText.text = remainingTime.ToString("F0") + " sn";
-        timerText.color = Color.white;
+        if (factory != null)
+        {
+            float remainingTime = factory.GetRemainingProductionTime();
+            timerText.text = remainingTime.ToString("F0") + " sn";
+            timerText.color = Color.white;
+        }
     }
     private void UpdateQueueText(int queue)
     {
@@ -143,10 +146,15 @@ public class ResourceUI : MonoBehaviour
         bool hasQueue = factory.ProductionQueue > 0;
         resourcePanel.SetActive(hasProduction || hasResources || hasQueue);
         bool isFull = factory.CurrentStock >= factory.config.capacity;
-        if (isFull && timerText != null)
+        if (isFull)
         {
-            timerText.text = "FULL";
-            timerText.color = Color.red;
+            // Stok dolu olduğunda slider'ı sıfırla
+            productionProgressSlider.value = 1f;
+            if (timerText != null)
+            {
+                timerText.text = "FULL";
+                timerText.color = Color.red;
+            }
         }
     }
     private async UniTaskVoid TrackProductionProgressAsync()
@@ -154,9 +162,19 @@ public class ResourceUI : MonoBehaviour
         await UniTask.DelayFrame(0);
         while (this != null && isInitialized && gameObject.activeInHierarchy)
         {
-            if (IsFactoryProducing())
+            bool isFull = factory.CurrentStock >= factory.config.capacity;
+            if (IsFactoryProducing() && !isFull)
             {
-                UpdateProductionTimer();
+                float remainingTime = factory.GetRemainingProductionTime();
+                float totalTime = factory.config.recipe.productionTime;
+                if (totalTime <= 0f) totalTime = 1f;
+                float progress = 1f - (remainingTime / totalTime);
+                progress = Mathf.Clamp01(progress);
+                UpdateProductionProgress(progress);
+            }
+            else
+            {
+                UpdateProductionProgress(0f);
             }
             await UniTask.Yield(PlayerLoopTiming.Update);
         }
@@ -168,13 +186,6 @@ public class ResourceUI : MonoBehaviour
                factory.CurrentStock < factory.config.capacity &&
                factory.config != null &&
                factory.config.recipe != null;
-    }
-    private void UpdateProductionTimer()
-    {
-        productionTimer += Time.deltaTime;
-        float progress = Mathf.Repeat(productionTimer, factory.config.recipe.productionTime) /
-                         factory.config.recipe.productionTime;
-        UpdateProductionProgress(progress);
     }
     private void OnDestroy()
     {
