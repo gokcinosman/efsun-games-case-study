@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Zenject;
+using Zenject.ReflectionBaking.Mono.Cecil;
 public class GameInstaller : MonoInstaller
 {
     public override void InstallBindings()
@@ -18,5 +19,13 @@ public class GameInstaller : MonoInstaller
        .FromComponentInHierarchy()
        .AsSingle()
        .NonLazy();
+        Container.Bind<ResourceAnimation>()
+       .FromComponentInHierarchy()
+       .AsSingle()
+       .NonLazy();
+        Container.Bind<CurrencyUI>()
+      .FromComponentInHierarchy()
+      .AsSingle()
+      .NonLazy();
     }
 }

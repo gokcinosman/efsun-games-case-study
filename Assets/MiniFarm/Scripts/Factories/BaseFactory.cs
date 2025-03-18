@@ -51,6 +51,8 @@ public class BaseFactory : MonoBehaviour, IDisposable
     private float remainingProductionTime;
     private float currentProductionTime;
     [Inject] protected ResourceManager resourceManager;
+    [Inject] protected ResourceAnimation resourceAnimation;
+    [Inject] protected CurrencyUI currencyUI;
     #endregion
     #region Unity Yaşam Döngüsü
     protected virtual void Start()
@@ -247,7 +249,13 @@ public class BaseFactory : MonoBehaviour, IDisposable
         if (collected > 0 && config != null && recipe != null)
         {
             string outputResourceName = recipe.outputResourceName;
-            resourceManager.Add(outputResourceName, collected);
+            currencyUI.PlayResourceCollectAnimation(
+                transform.position,
+                outputResourceName,
+                collected,
+                recipe.outputResourceIcon,
+                () => resourceManager.Add(outputResourceName, collected)
+            );
         }
         if (config != null && !config.requiresInput && CurrentStock < capacity && !IsProducing)
         {
